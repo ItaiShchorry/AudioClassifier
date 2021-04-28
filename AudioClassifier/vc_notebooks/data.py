@@ -1282,3 +1282,12 @@ def hierarchical_clustering(dist_matrix, linkage_method='ward', fcluster_th = 0.
 
 
 
+def picklel(p):
+    with open(p,'rb') as f:
+        x = pickle.load(f)
+    
+    return x
+
+def pickles(p,x):
+    with open(p,'wb') as f:
+        pickle.dump(x, f)
