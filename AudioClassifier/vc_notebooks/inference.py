@@ -110,8 +110,9 @@ def choose_model_helper(text):
     model_folder = CWD.parent/'models'/'tabular'/model_name
 
     learn_inf, config = load_model(model_folder)
+    feat_imp = picklel(model_folder/'feat_imp.p')
     
-    return learn_inf, config
+    return learn_inf, config, feat_imp
 
 
 # + Collapsed="false"
@@ -153,7 +154,7 @@ if selection == "Data Explorator":
     sub_sections = ['Data Summary', 'Target Exploration', 'Correlations']
     internal_selection = st.sidebar.radio("Data Explorator", sub_sections)
     
-    learn_inf, config = choose_model_helper('Which dataset would you like to examine?')
+    learn_inf, config, _ = choose_model_helper('Which dataset would you like to examine?')
     df = read_df_from_path(config['FILE_PATH'])
     
     if internal_selection == 'Data Summary':
@@ -217,10 +218,13 @@ if selection == "Model Evaluator":
 
     st.write("## Model Drilldown") 
     # choose model to evaluate
-    learn_inf, config = choose_model_helper('Which model would you like to investigate?')
+    learn_inf, config, feat_imp = choose_model_helper('Which model would you like to investigate?')
+    st.write("### Feature Importance") 
+    st.write("implemented via permutation importance methodology") 
+    st.write(feat_imp)
 
 if selection == "Inferencer":
-    learn_inf, config = choose_model_helper('Which model would you like to predict with?')
+    learn_inf, config, _ = choose_model_helper('Which model would you like to predict with?')
     
     st.write("## Inference")
     uploaded_wav = st.file_uploader('upload a wave file for prediction')

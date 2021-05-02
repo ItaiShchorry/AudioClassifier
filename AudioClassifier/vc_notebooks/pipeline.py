@@ -619,6 +619,20 @@ draw_tree(X_train, pd.Series(pd.Categorical(y_train)), type_tree='multiclass')
 # Not much to learn, but it seems like there are indeed areas more fitting for specific classes (e.g. that 3 -> 6 split that leads to class 8, the siren). 
 
 # + [markdown] Collapsed="false"
+# ## Feature Importance
+# Will be based on Zachary Mueller's implementation for permutation importance
+
+# + Collapsed="false" jupyter={"outputs_hidden": true}
+feat_imp = PermutationImportance(learn)
+
+
+# + Collapsed="false"
+pickles(MODEL_FOLDER/'feat_imp.p', pd.DataFrame.from_dict(feat_imp.importance, orient='index',columns=['importance']).sort_values('importance', ascending=False))
+
+# + Collapsed="false"
+MODEL_FOLDER.parent/mdl_name
+
+# + [markdown] Collapsed="false"
 # # Continued Iterative Development
 
 # + [markdown] Collapsed="false"
@@ -818,7 +832,7 @@ for dh in data_hparams:
 #
 # Let's take a closer look at that model
 
-# + Collapsed="false"
+# + Collapsed="false" jupyter={"outputs_hidden": true}
 mdl_name = 'tuning_cutoff_0_16'
 perm_idx = int(mdl_name.split('_')[-1])
 permute_dict = permutations_dicts[perm_idx]
@@ -836,6 +850,9 @@ learn.load(Path.cwd()/mdl_name/'model')
 # dls = create_dataloaders(X_train, X_valid,y_train, y_valid, run_config['TARGET'])
 # learn = tabular_learner(dls, metrics=accuracy,cbs=[], model_dir=mdl_name, **permute_dict)
 # learn.load(r'/dsp/dsp_portal/personal/itai.shchorry/AudioClassificationProject/op-data-science-prod/OptimalAI/notebooks/tuning_cutoff_0_16/model')# (Path.cwd()/mdl_name/'model')
+
+# + Collapsed="false"
+get_wf_chart(learn)
 
 # + Collapsed="false"
 get_wf_chart(learn)
