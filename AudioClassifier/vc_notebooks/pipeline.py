@@ -389,7 +389,7 @@ if REMOVE_OUTLIERS and outliers:
 
 # + Collapsed="false"
 # Prepare normalization mapping 
-proc_df = normalize(proc_df, GLOBAL_CONFIG, summary_table=summary_table)
+proc_df, GLOBAL_CONFIG = normalize(proc_df, GLOBAL_CONFIG, summary_table=summary_table)
 
 # + [markdown] Collapsed="false"
 # # Model
@@ -467,15 +467,11 @@ print(f"train: {len(X_train)} ({len(X_train)/len(proc_df):.2f})\n"
 # + Collapsed="false"
 y_valid.value_counts() / proc_df[TARGET].value_counts()
 
-
 # + [markdown] Collapsed="false"
 # Looks good. Let's save them for reproducibility & get those into fast.ai's dataloaders
 
 # + Collapsed="false"
-def pickles(p,x):
-    with open(p,'wb') as f:
-        pickle.dump(x, f)
-        
+
 # pickles(PREPROCESSED_FOLDER/'X_train.p', X_train)
 # pickles(PREPROCESSED_FOLDER/'X_valid.p', X_valid)
 # pickles(PREPROCESSED_FOLDER/'y_train.p', y_train)
@@ -483,14 +479,8 @@ def pickles(p,x):
 # pickles(PREPROCESSED_FOLDER/'X_test.p', X_test)
 # pickles(PREPROCESSED_FOLDER/'y_test.p', y_test)
 
-
 # + Collapsed="false"
-def picklel(p):
-    with open(p,'rb') as f:
-        x = pickle.load(f)
-    
-    return x
-        
+  
 # X_train = picklel(PREPROCESSED_FOLDER/'X_train.p')
 # X_valid = picklel(PREPROCESSED_FOLDER/'X_valid.p')
 # y_train = picklel(PREPROCESSED_FOLDER/'y_train.p')
@@ -563,11 +553,36 @@ proc_df_wrapped = TabularPandas(Xy, cont_names=list(set(Xy.columns) - set([TARGE
 dls = proc_df_wrapped.dataloaders(bs=64)
 
 # + Collapsed="false"
-learn = tabular_learner(dls, metrics=accuracy,cbs=[SaveModelCallback,ReduceLROnPlateau])
+learn = tabular_learner(dls, metrics=accuracy,cbs=[SaveModelCallback,ReduceLROnPlateau],model_dir='baseline_0_0')
 
 # + Collapsed="false"
 learn.fit_one_cycle(27)
 
+
+# + [markdown] Collapsed="false"
+# Let's record this model as a baseline
+
+# + Collapsed="false"
+mdl_name = 'baseline'
+MODEL_FOLDER = MODEL_FOLDER.parent/mdl_name
+
+learn.export(fname=mdl_name+'.pkl')
+
+# + [markdown] Collapsed="false"
+# and relevant metrics
+
+# + Collapsed="false"
+tr_acc,val_acc,test_acc = calc_accs(learn)
+
+interp = ClassificationInterpretation.from_learner(learn)
+conf = interp.confusion_matrix()
+
+glob_df = pd.DataFrame([[tr_acc,val_acc,test_acc]], columns=['tr_acc','val_acc','test_acc'], index=[mdl_name])
+conf_df = pd.DataFrame([np.round(np.diag(conf) / conf.sum(axis=1), 2)], columns=interp.vocab, index=[mdl_name])
+metrics_df = pd.concat([glob_df, conf_df], axis=1)
+
+pickles(MODEL_FOLDER/'metrics_df.p',metrics_df)
+pickles(MODEL_FOLDER/'config.p',GLOBAL_CONFIG)
 
 # + [markdown] Collapsed="false"
 # # Analysis
@@ -636,7 +651,7 @@ test_acc
 # Let's produce a waterfall chart for all 3 populations
 
 # + Collapsed="false"
-def acc_on_pop(X_pop, y_pop):
+def acc_on_pop(X_pop, y_pop, learn):
     """
     Using existing model obtained in learner, we calculate accuracy for a given population
     """
@@ -653,16 +668,16 @@ def acc_on_pop(X_pop, y_pop):
     pop_acc = metrics.accuracy_score(y_test_encoded,  preds[2].numpy())
     return pop_acc
 
-def calc_accs():
-    tr_acc = acc_on_pop(X_train, y_train)
-    val_acc = acc_on_pop(X_valid, y_valid)
-    test_acc = acc_on_pop(X_test, y_test)
+def calc_accs(learn):
+    tr_acc = acc_on_pop(X_train, y_train, learn)
+    val_acc = acc_on_pop(X_valid, y_valid, learn)
+    test_acc = acc_on_pop(X_test, y_test, learn)
     
     return tr_acc,val_acc,test_acc
 
 
 # + Collapsed="false"
-tr_acc,val_acc,test_acc = calc_accs()
+tr_acc,val_acc,test_acc = calc_accs(learn)
 
 # + Collapsed="false"
 import waterfall_chart
@@ -697,14 +712,14 @@ learn.fit_one_cycle(30)
 # Looks better! let's take a closer look
 
 # + Collapsed="false"
-def get_wf_chart():
-    tr_acc,val_acc,test_acc = calc_accs()
+def get_wf_chart(learn):
+    tr_acc,val_acc,test_acc = calc_accs(learn)
     print(f"accuracies are: train: {tr_acc}, valid: {val_acc}, test: {test_acc}")
     a = ['goal-perf','train','valid','test']
     b = [0.95,tr_acc-0.95,val_acc-tr_acc,test_acc-val_acc]
     waterfall_chart.plot(a, b, formatting='{:,.3f}');
     
-get_wf_chart()
+get_wf_chart(learn)
 
 # + [markdown] Collapsed="false"
 # Got slightly better - let's try tuning some hyper parameters by setting up W&B
@@ -812,7 +827,18 @@ learn = tabular_learner(dls, metrics=accuracy,cbs=[], model_dir=mdl_name, **perm
 learn.load(Path.cwd()/mdl_name/'model')
 
 # + Collapsed="false"
-get_wf_chart()
+# mdl_name = 'tuning_cutoff_0_16'
+# perm_idx = int(mdl_name.split('_')[-1])
+# permute_dict = permutations_dicts[perm_idx]
+# run_config = picklel(MODEL_FOLDER/'config.p')
+# proc_df = run_data_module(run_config, df)
+# X_train, X_valid, X_test,y_train, y_valid, y_test = split_data(proc_df, run_config)
+# dls = create_dataloaders(X_train, X_valid,y_train, y_valid, run_config['TARGET'])
+# learn = tabular_learner(dls, metrics=accuracy,cbs=[], model_dir=mdl_name, **permute_dict)
+# learn.load(r'/dsp/dsp_portal/personal/itai.shchorry/AudioClassificationProject/op-data-science-prod/OptimalAI/notebooks/tuning_cutoff_0_16/model')# (Path.cwd()/mdl_name/'model')
+
+# + Collapsed="false"
+get_wf_chart(learn)
 
 # + [markdown] Collapsed="false"
 # and review the confusion matrix
@@ -825,7 +851,28 @@ interp.plot_confusion_matrix()
 interp.most_confused()[:5]
 
 # + [markdown] Collapsed="false"
-# Let's wrap up the hp search for future use (run_hp_search in model.py), and produce a utility for inferencing a .wav file.  
+# We'll save the performance metrics to compare to newer models in the future
+
+# + Collapsed="false"
+tr_acc,val_acc,test_acc = calc_accs()
+
+glob_df = pd.DataFrame([[tr_acc,val_acc,test_acc]], columns=['tr_acc','val_acc','test_acc'], index=[mdl_name])
+conf_df = pd.DataFrame([np.round(np.diag(conf) / conf.sum(axis=1), 2)], columns=interp.vocab, index=[mdl_name])
+metrics_df = pd.concat([glob_df, conf_df], axis=1)
+
+metrics_df
+
+# + [markdown] Collapsed="false"
+# And we'll also wrap up the hp search for future use (run_hp_search in model.py)
+
+# + Collapsed="false"
+pickles(MODEL_FOLDER/'metrics_df.p',metrics_df)
+
+# + [markdown] Collapsed="false"
+# ## Inference utility
+
+# + [markdown] Collapsed="false"
+# We'll produce a utility for inferencing a .wav file.  
 #
 
 # + Collapsed="false"
@@ -870,6 +917,20 @@ def predict_wav(wav_file_path, learn, config):
 
 
 # + Collapsed="false"
+MODEL_FOLDER = cwd.parent/'models'/'tabular'/'tuning_cutoff_0_16'
+learn_inf = load_learner(MODEL_FOLDER/'export.pkl')
+
+# load config
+GLOBAL_CONFIG = picklel(MODEL_FOLDER/'config.p')
+
+# + Collapsed="false"
+get_wf_chart(learn_inf)
+
+# + Collapsed="false"
+interp = ClassificationInterpretation.from_learner(learn_inf)
+interp.plot_confusion_matrix()
+
+# + Collapsed="false"
 wav_file_path = Path(r'/dsp/dsp_portal/personal/itai.shchorry/AudioClassificationProject/AudioClassifier/Data/UrbanSound8K/audio/fold7/149193-5-0-4.wav')
 wave_df_proc, clas, probs = predict_wav(wav_file_path, learn, GLOBAL_CONFIG)
 
@@ -883,3 +944,6 @@ plt.figure(figsize=(12,4))
 data,sample_rate = librosa.load(wav_file_path)
 _ = librosa.display.waveplot(data,sr=sample_rate)
 ipd.Audio(wav_file_path)
+
+# + Collapsed="false"
+

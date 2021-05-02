@@ -1145,7 +1145,7 @@ def split_data(proc_df, config):
            f"remaining: {len(X_)} ({(len(X_) / len(proc_df)):.2f})")
 
     # Split to test
-    X_valid, X_test, y_valid, y_test = train_test_split(X_, y_, train_size=round(config['VALID_SIZE']/(config['VALID_SIZE']+config['TEST_SIZE']), 2), stratify=y_)
+    X_valid, X_test, y_valid, y_test = train_test_split(X_, y_, train_size=round(config['VALID_SIZE']/(config['VALID_SIZE']+config['TEST_SIZE']), 2), stratify=y_, random_state=config['RANDOM_STATE'])
     
     return X_train, X_valid, X_test,y_train, y_valid, y_test
 
@@ -1291,3 +1291,7 @@ def picklel(p):
 def pickles(p,x):
     with open(p,'wb') as f:
         pickle.dump(x, f)
+        
+def get_subdirectories(main_dir):
+    return [name for name in os.listdir(main_dir)
+            if os.path.isdir(os.path.join(main_dir, name))]
