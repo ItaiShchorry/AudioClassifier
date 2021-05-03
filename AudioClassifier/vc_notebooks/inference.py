@@ -133,19 +133,6 @@ def get_plotting_dict():
     
     return plotting_dict, kinds
 
-# + Collapsed="false"
-# perf_dfs = []
-# for m in MODELS_LST:
-#     m_path = CWD.parent/'models'/'tabular'
-#     perf_dfs.append(picklel(m_path/m/'metrics_df.p'))
-
-# perf_dfs = pd.concat(perf_dfs)
-
-# glob_stats = ['tr_acc','val_acc','test_acc']
-
-# cs = list(set(perf_dfs.columns) - set(glob_stats))
-# sns.relplot(data=perf_dfs[cs], kind='line')
-
 # + Collapsed="false" jupyter={"outputs_hidden": true}
 import streamlit as st
 from scipy.cluster.hierarchy import dendrogram, linkage, fcluster
