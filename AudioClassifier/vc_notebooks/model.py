@@ -328,7 +328,7 @@ class PermutationImportance():
             self.dl = learn.dls[1]
         self.x_names = learn.dls.x_names.filter(lambda x: '_na' not in x)
         self.na = learn.dls.x_names.filter(lambda x: '_na' in x)
-        self.y = dls.y_names
+        self.y = learn.dls.y_names
         self.results = self.calc_feat_importance()
         self.plot_importance(self.ord_dic_to_df(self.results))
 
@@ -339,7 +339,7 @@ class PermutationImportance():
         orig = self.dl.items[col].values
         perm = np.random.permutation(len(orig))
         self.dl.items[col] = self.dl.items[col].values[perm]
-        metric = learn.validate(dl=self.dl)[1]
+        metric = self.learn.validate(dl=self.dl)[1]
         self.dl.items[col] = orig
         return metric
 

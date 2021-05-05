@@ -287,7 +287,15 @@ if selection == "Inferencer":
 #     - interactive preprocessing:
 #         - expose preprocessing configuration
 #         - outlier detection thresholder
-#         - 
+# - Model Evaluator
+#     - class-level performance:
+#         - Allow drill-down to class statistics (PR, F1, num_samples)
+#         - Investigate specific populations (FP, FN)
+#     - compare 2 models (default - last 2):
+#         - compare performance
+#         - compare hyperparams
+#         
+#             
 
 # + [markdown] Collapsed="false"
 # ### MadeWithML

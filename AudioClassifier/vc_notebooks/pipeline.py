@@ -19,7 +19,7 @@
 # ## Resources
 
 # + [markdown] Collapsed="false"
-# The project builds upon knowledge, practices & code gathered from the following list of resources:
+# The project builds upon knowledge, practices & code gathered mainly from the following list of resources:
 # - Full Stack Deep Learning materials
 # - Made With ML "MLOps" series - https://madewithml.com/courses/mlops/
 # - Mikes Males's Sound Classification project - https://mikesmales.medium.com/sound-classification-using-deep-learning-8bc2aa1990b7
@@ -560,29 +560,58 @@ learn.fit_one_cycle(27)
 
 
 # + [markdown] Collapsed="false"
-# Let's record this model as a baseline
-
-# + Collapsed="false"
-mdl_name = 'baseline'
-MODEL_FOLDER = MODEL_FOLDER.parent/mdl_name
-
-learn.export(fname=mdl_name+'.pkl')
+# Let's record this model & relevant metrics as a baseline
 
 # + [markdown] Collapsed="false"
 # and relevant metrics
 
 # + Collapsed="false"
-tr_acc,val_acc,test_acc = calc_accs(learn)
+def acc_on_pop(X_pop, y_pop, learn):
+    """
+    Using existing model obtained in learner, we calculate accuracy for a given population
+    """
+    
+    # get predictions
+    pop_df = X_pop.copy()
+    pop_dl = learn.dls.test_dl(pop_df)
 
-interp = ClassificationInterpretation.from_learner(learn)
-conf = interp.confusion_matrix()
+    preds = learn.get_preds(dl=pop_dl, with_decoded=True)
+    
+    categorizer = learn.dls.fs[0]
+    y_test_encoded = y_pop.apply(lambda x: int(categorizer.encodes(x)))
+    
+    pop_acc = metrics.accuracy_score(y_test_encoded,  preds[2].numpy())
+    return pop_acc
 
-glob_df = pd.DataFrame([[tr_acc,val_acc,test_acc]], columns=['tr_acc','val_acc','test_acc'], index=[mdl_name])
-conf_df = pd.DataFrame([np.round(np.diag(conf) / conf.sum(axis=1), 2)], columns=interp.vocab, index=[mdl_name])
-metrics_df = pd.concat([glob_df, conf_df], axis=1)
+def calc_accs(learn):
+    tr_acc = acc_on_pop(X_train, y_train, learn)
+    val_acc = acc_on_pop(X_valid, y_valid, learn)
+    test_acc = acc_on_pop(X_test, y_test, learn)
+    
+    return tr_acc,val_acc,test_acc
 
-pickles(MODEL_FOLDER/'metrics_df.p',metrics_df)
-pickles(MODEL_FOLDER/'config.p',GLOBAL_CONFIG)
+
+# + Collapsed="false"
+def save_model_and_stats(learn):
+
+    learn.export(Path(learn.model_dir)/'export.pkl')
+    tr_acc,val_acc,test_acc = calc_accs(learn)
+
+    interp = ClassificationInterpretation.from_learner(learn)
+    conf = interp.confusion_matrix()
+
+    glob_df = pd.DataFrame([[tr_acc,val_acc,test_acc]], columns=['tr_acc','val_acc','test_acc'], index=[learn.model_dir])
+    conf_df = pd.DataFrame([np.round(np.diag(conf) / conf.sum(axis=1), 2)], columns=interp.vocab, index=[learn.model_dir])
+    metrics_df = pd.concat([glob_df, conf_df], axis=1)
+
+    pickles(Path(learn.model_dir)/'metrics_df.p',metrics_df)
+    pickles(Path(learn.model_dir)/'config.p',GLOBAL_CONFIG)
+    
+    feat_imp = PermutationImportance(learn)
+    pickles(Path(learn.model_dir)/'feat_imp.p', pd.DataFrame.from_dict(feat_imp.importance, orient='index',columns=['importance']).sort_values('importance', ascending=False))
+    
+# save_model_and_stats(learn)
+
 
 # + [markdown] Collapsed="false"
 # # Analysis
@@ -660,35 +689,8 @@ y_test_encoded = y_test.apply(lambda x: int(categorizer.encodes(x)))
 test_acc = metrics.accuracy_score(y_test_encoded,  preds[2].numpy())
 test_acc
 
-
 # + [markdown] Collapsed="false"
 # Let's produce a waterfall chart for all 3 populations
-
-# + Collapsed="false"
-def acc_on_pop(X_pop, y_pop, learn):
-    """
-    Using existing model obtained in learner, we calculate accuracy for a given population
-    """
-    
-    # get predictions
-    pop_df = X_pop.copy()
-    pop_dl = learn.dls.test_dl(pop_df)
-
-    preds = learn.get_preds(dl=pop_dl, with_decoded=True)
-    
-    categorizer = learn.dls.fs[0]
-    y_test_encoded = y_pop.apply(lambda x: int(categorizer.encodes(x)))
-    
-    pop_acc = metrics.accuracy_score(y_test_encoded,  preds[2].numpy())
-    return pop_acc
-
-def calc_accs(learn):
-    tr_acc = acc_on_pop(X_train, y_train, learn)
-    val_acc = acc_on_pop(X_valid, y_valid, learn)
-    test_acc = acc_on_pop(X_test, y_test, learn)
-    
-    return tr_acc,val_acc,test_acc
-
 
 # + Collapsed="false"
 tr_acc,val_acc,test_acc = calc_accs(learn)
@@ -716,7 +718,7 @@ waterfall_chart.plot(a, b, formatting='{:,.3f}');
 # ### Regularization
 
 # + Collapsed="false"
-learn = tabular_learner(dls, metrics=accuracy,cbs=[SaveModelCallback,ReduceLROnPlateau], wd=0.1)
+learn = tabular_learner(dls, metrics=accuracy,cbs=[SaveModelCallback,ReduceLROnPlateau], model_dir='regularize', wd=0.1)
 
 # + Collapsed="false"
 learn.fit_one_cycle(30)
@@ -736,7 +738,10 @@ def get_wf_chart(learn):
 get_wf_chart(learn)
 
 # + [markdown] Collapsed="false"
-# Got slightly better - let's try tuning some hyper parameters by setting up W&B
+# Got slightly better - let's save it & try tuning some hyper parameters by setting up W&B
+
+# + Collapsed="false"
+save_model_and_stats(learn)
 
 # + [markdown] Collapsed="false"
 # ### Experiment Tracking With W&B
