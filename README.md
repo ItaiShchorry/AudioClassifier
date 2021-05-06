@@ -13,7 +13,7 @@ Implementation was done using Jupytext, to allow the comfort of working with not
 Repository content introduction:
 - create_dataset.py - will preprocess the audio samples into a tabular dataset based on [MFCC features](https://en.wikipedia.org/wiki/Mel-frequency_cepstrum)
 - pipeline.py - notebook (after using jupytext of course) that illustrates the process of EDAing our data, performing and evaluating the different experiments
-- inference.py - our streamlit app. Exposes EDA, Evaluations & Inferencing utilities.
+- inference.py - our streamlit app. Exposes EDA, evaluations & inferencing utilities.
 - libraries
     - data.py - data-related operations
     - model.py - model and analysis-related operations
