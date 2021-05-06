@@ -9,3 +9,11 @@ The project builds upon knowledge, practices & code gathered from the following 
 - Fast.ai's course & library - https://docs.fast.ai/
 
 Implementation was done using Jupytext, to allow the comfort of working with notebooks.  
+
+Repository content introduction:
+- create_dataset.py - will preprocess the audio samples into a tabular dataset based on [MFCC features](https://en.wikipedia.org/wiki/Mel-frequency_cepstrum)
+- pipeline.py - notebook that illustrates the process of EDAing, performing and evaluating the different experiments
+- inference.py - our streamlit app. Exposes EDA, Evaluations & Inferencing utilities.
+- libraries
+    - data.py - data-related operations
+    - model.py - model and analysis-related operations
